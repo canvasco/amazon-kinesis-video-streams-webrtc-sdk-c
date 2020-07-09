@@ -206,7 +206,7 @@ target_link_libraries(
   kvsWebrtcClient
   PRIVATE kvspicUtils
           kvspicState
-	  pthread
+          pthread
           ${OPENSSL_SSL_LIBRARY}
           ${OPENSSL_CRYPTO_LIBRARY}
           ${SRTP_LIBRARIES}
