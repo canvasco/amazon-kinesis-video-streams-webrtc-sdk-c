@@ -2,8 +2,7 @@
 
 #include "../../Include_i.h"
 
-STATUS createPayloadForG711(UINT32 mtu, PBYTE g711Frame, UINT32 g711FrameLength, PBYTE payloadBuffer, PUINT32 pPayloadLength,
-                            PUINT32 pPayloadSubLength, PUINT32 pPayloadSubLenSize)
+STATUS createPayloadForG711(UINT32 mtu, PBYTE g711Frame, UINT32 g711FrameLength, PBYTE payloadBuffer, PUINT32 pPayloadLength, PUINT32 pPayloadSubLength, PUINT32 pPayloadSubLenSize)
 {
     ENTERS();
     STATUS retStatus = STATUS_SUCCESS;
@@ -13,8 +12,7 @@ STATUS createPayloadForG711(UINT32 mtu, PBYTE g711Frame, UINT32 g711FrameLength,
     PUINT32 pCurSubLen = pPayloadSubLength;
     BOOL sizeCalculationOnly = (payloadBuffer == NULL);
 
-    CHK(g711Frame != NULL && pPayloadSubLenSize != NULL && pPayloadLength != NULL && (sizeCalculationOnly || pPayloadSubLength != NULL),
-        STATUS_NULL_ARG);
+    CHK(g711Frame != NULL && pPayloadSubLenSize != NULL && pPayloadLength != NULL && (sizeCalculationOnly || pPayloadSubLength != NULL), STATUS_NULL_ARG);
 
     payloadLength = g711FrameLength;
     payloadSubLenSize = g711FrameLength / mtu + (g711FrameLength % mtu == 0 ? 0 : 1);
@@ -77,3 +75,4 @@ CleanUp:
     LEAVES();
     return retStatus;
 }
+

@@ -2,9 +2,10 @@
 
 #include "../Include_i.h"
 
-STATUS createRtpPacket(UINT8 version, BOOL padding, BOOL extension, UINT8 csrcCount, BOOL marker, UINT8 payloadType, UINT16 sequenceNumber,
-                       UINT32 timestamp, UINT32 ssrc, PUINT32 csrcArray, UINT16 extensionProfile, UINT32 extensionLength, PBYTE extensionPayload,
-                       PBYTE payload, UINT32 payloadLength, PRtpPacket* ppRtpPacket)
+STATUS createRtpPacket(UINT8 version, BOOL padding, BOOL extension, UINT8 csrcCount, BOOL marker,
+                       UINT8 payloadType, UINT16 sequenceNumber, UINT32 timestamp, UINT32 ssrc, PUINT32 csrcArray,
+                       UINT16 extensionProfile, UINT32 extensionLength, PBYTE extensionPayload, PBYTE payload,
+                       UINT32 payloadLength, PRtpPacket* ppRtpPacket)
 {
     ENTERS();
     STATUS retStatus = STATUS_SUCCESS;
@@ -12,8 +13,8 @@ STATUS createRtpPacket(UINT8 version, BOOL padding, BOOL extension, UINT8 csrcCo
     CHK(pRtpPacket != NULL, STATUS_NOT_ENOUGH_MEMORY);
     pRtpPacket->pRawPacket = NULL;
     pRtpPacket->rawPacketLength = 0;
-    CHK_STATUS(setRtpPacket(version, padding, extension, csrcCount, marker, payloadType, sequenceNumber, timestamp, ssrc, csrcArray, extensionProfile,
-                            extensionLength, extensionPayload, payload, payloadLength, pRtpPacket));
+    CHK_STATUS(setRtpPacket(version, padding, extension, csrcCount, marker, payloadType, sequenceNumber, timestamp, ssrc, csrcArray,
+            extensionProfile, extensionLength, extensionPayload, payload, payloadLength, pRtpPacket));
 
 CleanUp:
     if (STATUS_FAILED(retStatus) && pRtpPacket != NULL) {
@@ -28,9 +29,10 @@ CleanUp:
     return retStatus;
 }
 
-STATUS setRtpPacket(UINT8 version, BOOL padding, BOOL extension, UINT8 csrcCount, BOOL marker, UINT8 payloadType, UINT16 sequenceNumber,
-                    UINT32 timestamp, UINT32 ssrc, PUINT32 csrcArray, UINT16 extensionProfile, UINT32 extensionLength, PBYTE extensionPayload,
-                    PBYTE payload, UINT32 payloadLength, PRtpPacket pRtpPacket)
+STATUS setRtpPacket(UINT8 version, BOOL padding, BOOL extension, UINT8 csrcCount, BOOL marker,
+                             UINT8 payloadType, UINT16 sequenceNumber, UINT32 timestamp, UINT32 ssrc, PUINT32 csrcArray,
+                             UINT16 extensionProfile, UINT32 extensionLength, PBYTE extensionPayload, PBYTE payload,
+                             UINT32 payloadLength, PRtpPacket pRtpPacket)
 {
     ENTERS();
     STATUS retStatus = STATUS_SUCCESS;
@@ -63,7 +65,7 @@ CleanUp:
     return retStatus;
 }
 
-STATUS freeRtpPacket(PRtpPacket* ppRtpPacket)
+STATUS freeRtpPacket(PRtpPacket * ppRtpPacket)
 {
     ENTERS();
 
@@ -111,8 +113,7 @@ CleanUp:
     return retStatus;
 }
 
-STATUS constructRetransmitRtpPacketFromBytes(PBYTE rawPacket, UINT32 packetLength, UINT16 sequenceNum, UINT8 payloadType, UINT32 ssrc,
-                                             PRtpPacket* ppRtpPacket)
+STATUS constructRetransmitRtpPacketFromBytes(PBYTE rawPacket, UINT32 packetLength, UINT16 sequenceNum, UINT8 payloadType, UINT32 ssrc, PRtpPacket* ppRtpPacket)
 {
     ENTERS();
     STATUS retStatus = STATUS_SUCCESS;
@@ -183,28 +184,30 @@ STATUS setRtpPacketFromBytes(PBYTE rawPacket, UINT32 packetLength, PRtpPacket pR
     csrcCount = rawPacket[0] & CSRC_COUNT_MASK;
     marker = ((rawPacket[1] >> MARKER_SHIFT) & MARKER_MASK) > 0;
     payloadType = rawPacket[1] & PAYLOAD_TYPE_MASK;
-    sequenceNumber = getInt16(*(PUINT16)(rawPacket + SEQ_NUMBER_OFFSET));
-    timestamp = getInt32(*(PUINT32)(rawPacket + TIMESTAMP_OFFSET));
-    ssrc = getInt32(*(PUINT32)(rawPacket + SSRC_OFFSET));
+    sequenceNumber = getInt16(*(PUINT16) (rawPacket + SEQ_NUMBER_OFFSET));
+    timestamp = getInt32(*(PUINT32) (rawPacket + TIMESTAMP_OFFSET));
+    ssrc = getInt32(*(PUINT32) (rawPacket + SSRC_OFFSET));
 
     currOffset = CSRC_OFFSET + (csrcCount * CSRC_LENGTH);
     CHK(packetLength >= currOffset, STATUS_RTP_INPUT_PACKET_TOO_SMALL);
 
     if (csrcCount > 0) {
-        csrcArray = (PUINT32)(rawPacket + CSRC_OFFSET);
+        csrcArray = (PUINT32) (rawPacket + CSRC_OFFSET);
     }
 
     if (extension) {
-        extensionProfile = getInt16(*(PUINT16)(rawPacket + currOffset));
+        extensionProfile = getInt16(*(PUINT16) (rawPacket + currOffset));
         currOffset += SIZEOF(UINT16);
-        extensionLength = getInt16(*(PUINT16)(rawPacket + currOffset)) * 4;
+        extensionLength = getInt16(*(PUINT16) (rawPacket + currOffset)) * 4;
         currOffset += SIZEOF(UINT16);
-        extensionPayload = (PBYTE)(rawPacket + currOffset);
+        extensionPayload = (PBYTE) (rawPacket + currOffset);
         currOffset += extensionLength;
     }
 
-    CHK_STATUS(setRtpPacket(version, padding, extension, csrcCount, marker, payloadType, sequenceNumber, timestamp, ssrc, csrcArray, extensionProfile,
-                            extensionLength, extensionPayload, rawPacket + currOffset, packetLength - currOffset, pRtpPacket));
+    CHK_STATUS(setRtpPacket(version, padding, extension, csrcCount, marker,
+            payloadType, sequenceNumber, timestamp, ssrc, csrcArray, extensionProfile,
+            extensionLength, extensionPayload, rawPacket + currOffset,
+            packetLength - currOffset, pRtpPacket));
 
 CleanUp:
     LEAVES();
@@ -222,10 +225,10 @@ STATUS createBytesFromRtpPacket(PRtpPacket pRtpPacket, PBYTE pRawPacket, PUINT32
     packetLength = RTP_GET_RAW_PACKET_SIZE(pRtpPacket);
 
     // Check if we are trying to calculate the required size only
-    CHK(pRawPacket != NULL, retStatus);
+    CHK (pRawPacket != NULL, retStatus);
 
     // Otherwise, check if the specified size is enough
-    CHK(*pPacketLength >= packetLength, STATUS_NOT_ENOUGH_MEMORY);
+    CHK (*pPacketLength >= packetLength, STATUS_NOT_ENOUGH_MEMORY);
 
     CHK_STATUS(setBytesFromRtpPacket(pRtpPacket, pRawPacket, packetLength));
 
@@ -284,8 +287,8 @@ STATUS setBytesFromRtpPacket(PRtpPacket pRtpPacket, PBYTE pRawPacket, UINT32 pac
     }
     pCurPtr++;
 
-    // https://tools.ietf.org/html/rfc7741#page-5
-    // All integer fields in the specifications are encoded as
+    //https://tools.ietf.org/html/rfc7741#page-5
+    //All integer fields in the specifications are encoded as
     //   unsigned integers in network octet order.
     putUnalignedInt16BigEndian(pCurPtr, pHeader->sequenceNumber);
     pCurPtr += SIZEOF(UINT16);
@@ -301,7 +304,7 @@ STATUS setBytesFromRtpPacket(PRtpPacket pRtpPacket, PBYTE pRawPacket, UINT32 pac
     }
 
     if (pHeader->extension) {
-        // the payload must be in 32-bit words.
+        //the payload must be in 32-bit words.
         CHK((pHeader->extensionLength) % SIZEOF(UINT32) == 0, STATUS_RTP_INVALID_EXTENSION_LEN);
 
         putUnalignedInt16BigEndian(pCurPtr, pHeader->extensionProfile);
@@ -318,8 +321,7 @@ CleanUp:
     return retStatus;
 }
 
-STATUS constructRtpPackets(PPayloadArray pPayloadArray, UINT8 payloadType, UINT16 startSequenceNumber, UINT32 timestamp, UINT32 ssrc,
-                           PRtpPacket pPackets, UINT32 packetCount)
+STATUS constructRtpPackets(PPayloadArray pPayloadArray, UINT8 payloadType, UINT16 startSequenceNumber, UINT32 timestamp, UINT32 ssrc, PRtpPacket pPackets, UINT32 packetCount)
 {
     ENTERS();
     STATUS retStatus = STATUS_SUCCESS;
@@ -334,8 +336,9 @@ STATUS constructRtpPackets(PPayloadArray pPayloadArray, UINT8 payloadType, UINT1
 
     curPtrInPayload = pPayloadArray->payloadBuffer;
     for (i = 0, curPtrInPayloadSubLen = pPayloadArray->payloadSubLength; i < pPayloadArray->payloadSubLenSize; i++, curPtrInPayloadSubLen++) {
-        CHK_STATUS(setRtpPacket(2, FALSE, FALSE, 0, i == pPayloadArray->payloadSubLenSize - 1, payloadType, sequenceNumber, timestamp, ssrc, NULL, 0,
-                                0, NULL, curPtrInPayload, *curPtrInPayloadSubLen, pPackets + i));
+        CHK_STATUS(setRtpPacket(2, FALSE, FALSE, 0, i == pPayloadArray->payloadSubLenSize - 1,
+                        payloadType, sequenceNumber, timestamp, ssrc, NULL,
+                        0, 0, NULL, curPtrInPayload, *curPtrInPayloadSubLen, pPackets + i));
 
         sequenceNumber = GET_UINT16_SEQ_NUM(sequenceNumber + 1);
 
