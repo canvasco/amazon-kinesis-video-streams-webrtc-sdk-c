@@ -68,11 +68,11 @@ if(BUILD_DEPENDENCIES)
   endif()
 
   if (USE_OPENSSL)
-    set(BUILD_ARGS -DBUILD_STATIC=${BUILD_STATIC}
-                   -DBUILD_OPENSSL_PLATFORM=${BUILD_OPENSSL_PLATFORM}
-                   -DOPENSSL_EXTRA=${OPENSSL_EXTRA})
-    build_dependency(openssl ${BUILD_ARGS})
-    set(OPENSSL_ROOT_DIR ${OPEN_SRC_INSTALL_PREFIX})
+    #set(BUILD_ARGS -DBUILD_STATIC=${BUILD_STATIC}
+    #               -DBUILD_OPENSSL_PLATFORM=${BUILD_OPENSSL_PLATFORM}
+    #               -DOPENSSL_EXTRA=${OPENSSL_EXTRA})
+    #build_dependency(openssl ${BUILD_ARGS})
+    #set(OPENSSL_ROOT_DIR ${OPEN_SRC_INSTALL_PREFIX})
   elseif(USE_MBEDTLS)
     set(BUILD_ARGS -DBUILD_STATIC=${BUILD_STATIC})
     build_dependency(mbedtls ${BUILD_ARGS})
