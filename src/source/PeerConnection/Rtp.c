@@ -174,6 +174,8 @@ STATUS writeFrame(PRtcRtpTransceiver pRtcRtpTransceiver, PFrame pFrame)
             CHK(FALSE, STATUS_NOT_IMPLEMENTED);
     }
 
+    DLOGW("presentationTs: %d, rtpTimestamp: %d", pFrame->presentationTs, rtpTimestamp);
+
     CHK_STATUS(rtpPayloadFunc(pKvsPeerConnection->MTU, (PBYTE) pFrame->frameData, pFrame->size, NULL, &(pPayloadArray->payloadLength), NULL, &(pPayloadArray->payloadSubLenSize)));
     if (pPayloadArray->payloadLength > pPayloadArray->maxPayloadLength) {
         SAFE_MEMFREE(pPayloadArray->payloadBuffer);
