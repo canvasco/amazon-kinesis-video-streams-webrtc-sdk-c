@@ -2,6 +2,8 @@
 
 #include "../Include_i.h"
 
+#include <com/amazonaws/kinesis/video/common/PlatformUtils.h>
+
 typedef STATUS (*RtpPayloadFunc)(UINT32, PBYTE, UINT32, PBYTE, PUINT32, PUINT32, PUINT32);
 
 STATUS createKvsRtpTransceiver(RTC_RTP_TRANSCEIVER_DIRECTION direction, PKvsPeerConnection pKvsPeerConnection, UINT32 ssrc,
