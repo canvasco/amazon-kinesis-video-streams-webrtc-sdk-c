@@ -10,8 +10,6 @@ WebRTC Client Metrics internal include file
 extern "C" {
 #endif
 
-#define LOG_STATS ((PCHAR) "LOG_STATS")
-
 /**
  * @brief Get specific ICE candidate pair stats
  * @param [in] PRtcPeerConnection Contains the Ice agent object with diagnostics object
@@ -25,10 +23,11 @@ STATUS getIceCandidatePairStats(PRtcPeerConnection, PRtcIceCandidatePairStats);
  * @brief Get specific ICE candidate stats
  * @param [in] PRtcPeerConnection Contains the Ice agent object with diagnostics object
  * @param [in/out] PRtcIceCandidateStats Fill up the ICE candidate stats for application consumption
+ * @param [in] BOOL If TRUE, remote candidate stats are extracted, else local candidate stats are extracted
  * @return Pass/Fail
  *
  */
-STATUS getIceCandidateStats(PRtcPeerConnection, PRtcIceCandidateStats);
+STATUS getIceCandidateStats(PRtcPeerConnection, BOOL, PRtcIceCandidateStats);
 
 /**
  * @brief Get specific ICE server stats
@@ -44,14 +43,6 @@ STATUS getIceCandidateStats(PRtcPeerConnection, PRtcIceCandidateStats);
 STATUS getIceServerStats(PRtcPeerConnection, PRtcIceServerStats);
 
 /**
- * @brief Log ICE Server Metrics. Can be enabled by `export LOG_STATS=TRUE`
- * @param [in] PRtcIceServerStats Stats to be logged
- * @return Pass/Fail
- *
- */
-STATUS logIceServerMetrics(PRtcIceServerStats);
-
-/**
  * @brief Get specific transport stats
  * @param [in] PRtcPeerConnection
  * @param [in/out] PRtcIceCandidateStats Fill up the transport stats for application consumption
@@ -63,20 +54,22 @@ STATUS getTransportStats(PRtcPeerConnection, PRtcTransportStats);
 /**
  * @brief Get remote RTP inbound stats
  * @param [in] PRtcPeerConnection
+ * @param [in] PRtcRtpTransceiver transceiver to get stats for, first transceiver if NULL
  * @param [in/out] PRtcOutboundRtpStreamStats Fill up the RTP inbound stats for application consumption
  * @return Pass/Fail
  *
  */
-STATUS getRtpRemoteInboundStats(PRtcPeerConnection, PRtcRemoteInboundRtpStreamStats);
+STATUS getRtpRemoteInboundStats(PRtcPeerConnection, PRtcRtpTransceiver, PRtcRemoteInboundRtpStreamStats);
 
 /**
  * @brief Get RTP outbound stats
  * @param [in] PRtcPeerConnection
+ * @param [in] PRtcRtpTransceiver transceiver to get stats for, first transceiver if NULL
  * @param [in/out] PRtcOutboundRtpStreamStats Fill up the RTP outbound stats for application consumption
  * @return Pass/Fail
  *
  */
-STATUS getRtpOutboundStats(PRtcPeerConnection, PRtcOutboundRtpStreamStats);
+STATUS getRtpOutboundStats(PRtcPeerConnection, PRtcRtpTransceiver, PRtcOutboundRtpStreamStats);
 
 #ifdef __cplusplus
 }

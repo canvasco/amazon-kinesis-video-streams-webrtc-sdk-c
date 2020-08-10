@@ -43,6 +43,7 @@ STATUS createTurnConnection(PIceServer pTurnServer, TIMER_QUEUE_HANDLE timerQueu
 
     ATOMIC_STORE_BOOL(&pTurnConnection->stopTurnConnection, FALSE);
     ATOMIC_STORE_BOOL(&pTurnConnection->hasAllocation, FALSE);
+    ATOMIC_STORE_BOOL(&pTurnConnection->shutdownComplete, FALSE);
 
     if (pTurnConnectionCallbacks != NULL) {
         pTurnConnection->turnConnectionCallbacks = *pTurnConnectionCallbacks;
@@ -107,10 +108,16 @@ STATUS freeTurnConnection(PTurnConnection* ppTurnConnection)
     }
 
     if (IS_VALID_MUTEX_VALUE(pTurnConnection->lock)) {
+        /* in case some thread is in the middle of a turn api call. */
+        MUTEX_LOCK(pTurnConnection->lock);
+        MUTEX_UNLOCK(pTurnConnection->lock);
         MUTEX_FREE(pTurnConnection->lock);
     }
 
     if (IS_VALID_MUTEX_VALUE(pTurnConnection->sendLock)) {
+        /* in case some thread is in the middle of a turn api call. */
+        MUTEX_LOCK(pTurnConnection->sendLock);
+        MUTEX_UNLOCK(pTurnConnection->sendLock);
         MUTEX_FREE(pTurnConnection->sendLock);
     }
 
@@ -211,6 +218,8 @@ STATUS turnConnectionHandleStun(PTurnConnection pTurnConnection, PBYTE pBuffer, 
 
     switch (stunPacketType) {
         case STUN_PACKET_TYPE_ALLOCATE_SUCCESS_RESPONSE:
+            /* If shutdown has been initiated, ignore the allocation response */
+            CHK(!ATOMIC_LOAD(&pTurnConnection->stopTurnConnection), retStatus);
             CHK_STATUS(deserializeStunPacket(pBuffer, bufferLen, pTurnConnection->longTermKey, KVS_MD5_DIGEST_LENGTH, &pStunPacket));
             CHK_STATUS(getStunAttribute(pStunPacket, STUN_ATTRIBUTE_TYPE_XOR_RELAYED_ADDRESS, &pStunAttr));
             CHK_WARN(pStunAttr != NULL, retStatus, "No relay address attribute found in TURN allocate response. Dropping Packet");
@@ -618,7 +627,6 @@ STATUS turnConnectionAddPeer(PTurnConnection pTurnConnection, PKvsIpAddress pPee
     CHK_WARN(pTurnConnection->turnPeerCount < DEFAULT_TURN_MAX_PEER_COUNT, STATUS_INVALID_OPERATION, "Add peer failed. Max peer count reached");
 
     pTurnPeer = &pTurnConnection->turnPeerList[pTurnConnection->turnPeerCount++];
-    CHK(pTurnPeer != NULL, STATUS_NOT_ENOUGH_MEMORY);
 
     pTurnPeer->connectionState = TURN_PEER_CONN_STATE_CREATE_PERMISSION;
     pTurnPeer->address = *pPeerAddress;
@@ -1049,10 +1057,9 @@ STATUS turnConnectionStepState(PTurnConnection pTurnConnection)
                 }
 
                 CHK_STATUS(turnConnectionFreePreAllocatedPackets(pTurnConnection));
-
-                pTurnConnection->state = TURN_STATE_NEW;
-
-                CHK_STATUS(connectionListenerRemoveConnection(pTurnConnection->pConnectionListener, pTurnConnection->pControlChannel));
+                CHK_STATUS(socketConnectionClosed(pTurnConnection->pControlChannel));
+                pTurnConnection->state = STATUS_SUCCEEDED(pTurnConnection->errorStatus) ? TURN_STATE_NEW : TURN_STATE_FAILED;
+                ATOMIC_STORE_BOOL(&pTurnConnection->shutdownComplete, TRUE);
             }
 
             break;
@@ -1061,6 +1068,11 @@ STATUS turnConnectionStepState(PTurnConnection pTurnConnection)
             DLOGW("TurnConnection in TURN_STATE_FAILED due to 0x%08x. Aborting TurnConnection", pTurnConnection->errorStatus);
             /* Since we are aborting, not gonna do cleanup */
             ATOMIC_STORE_BOOL(&pTurnConnection->hasAllocation, FALSE);
+            /* If we haven't done cleanup, go to cleanup state which will do the cleanup then go to failed state again. */
+            if (!ATOMIC_LOAD_BOOL(&pTurnConnection->shutdownComplete)) {
+                pTurnConnection->state = TURN_STATE_CLEAN_UP;
+                pTurnConnection->stateTimeoutTime = currentTime + DEFAULT_TURN_CLEAN_UP_TIMEOUT;
+            }
 
             break;
 
@@ -1068,19 +1080,15 @@ STATUS turnConnectionStepState(PTurnConnection pTurnConnection)
             break;
     }
 
-    if (ATOMIC_LOAD_BOOL(&pTurnConnection->stopTurnConnection) && pTurnConnection->state != TURN_STATE_CLEAN_UP &&
-        pTurnConnection->state != TURN_STATE_NEW) {
-        if (ATOMIC_LOAD_BOOL(&pTurnConnection->hasAllocation)) {
-            pTurnConnection->state = TURN_STATE_CLEAN_UP;
-            pTurnConnection->stateTimeoutTime = currentTime + DEFAULT_TURN_CLEAN_UP_TIMEOUT;
-        } else {
-            pTurnConnection->state = TURN_STATE_NEW;
-        }
-    }
-
 CleanUp:
 
     CHK_LOG_ERR(retStatus);
+
+    if (STATUS_SUCCEEDED(retStatus) && ATOMIC_LOAD_BOOL(&pTurnConnection->stopTurnConnection) && pTurnConnection->state != TURN_STATE_CLEAN_UP &&
+        pTurnConnection->state != TURN_STATE_NEW) {
+        pTurnConnection->state = TURN_STATE_CLEAN_UP;
+        pTurnConnection->stateTimeoutTime = currentTime + DEFAULT_TURN_CLEAN_UP_TIMEOUT;
+    }
 
     /* move to failed state if retStatus is failed status and state is not yet TURN_STATE_FAILED */
     if (STATUS_FAILED(retStatus) && pTurnConnection->state != TURN_STATE_FAILED) {
@@ -1173,7 +1181,7 @@ BOOL turnConnectionIsShutdownComplete(PTurnConnection pTurnConnection)
     if (pTurnConnection == NULL) {
         return TRUE;
     } else {
-        return !ATOMIC_LOAD_BOOL(&pTurnConnection->hasAllocation);
+        return ATOMIC_LOAD_BOOL(&pTurnConnection->shutdownComplete);
     }
 }
 
@@ -1286,7 +1294,7 @@ STATUS turnConnectionTimerCallback(UINT32 timerId, UINT64 currentTime, UINT64 cu
             break;
 
         case TURN_STATE_FAILED:
-            stopScheduling = TRUE;
+            stopScheduling = ATOMIC_LOAD_BOOL(&pTurnConnection->shutdownComplete);
             break;
 
         default:

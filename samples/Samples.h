@@ -12,7 +12,7 @@ extern "C" {
 
 #include <com/amazonaws/kinesis/video/webrtcclient/Include.h>
 
-#define NUMBER_OF_H264_FRAME_FILES               403
+#define NUMBER_OF_H264_FRAME_FILES               1500
 #define NUMBER_OF_OPUS_FRAME_FILES               618
 #define DEFAULT_FPS_VALUE                        25
 #define DEFAULT_MAX_CONCURRENT_STREAMING_SESSION 10
@@ -43,9 +43,7 @@ typedef struct {
     volatile ATOMIC_BOOL appTerminateFlag;
     volatile ATOMIC_BOOL interrupted;
     volatile ATOMIC_BOOL mediaThreadStarted;
-    volatile ATOMIC_BOOL updatingSampleStreamingSessionList;
     volatile ATOMIC_BOOL recreateSignalingClient;
-    volatile SIZE_T streamingSessionListReadingThreadCount;
     BOOL useTestSrc;
     ChannelInfo channelInfo;
     PCHAR pCaCertPath;
@@ -71,6 +69,7 @@ typedef struct {
     UINT64 customData;
     PSampleStreamingSession sampleStreamingSessionList[DEFAULT_MAX_CONCURRENT_STREAMING_SESSION];
     UINT32 streamingSessionCount;
+    UINT32 iceUriCount;
     SignalingClientCallbacks signalingClientCallbacks;
     SignalingClientInfo clientInfo;
 } SampleConfiguration, *PSampleConfiguration;
@@ -126,6 +125,8 @@ VOID onDataChannel(UINT64, PRtcDataChannel);
 VOID onConnectionStateChange(UINT64, RTC_PEER_CONNECTION_STATE);
 STATUS sessionCleanupWait(PSampleConfiguration);
 STATUS awaitGetIceConfigInfoCount(SIGNALING_CLIENT_HANDLE, PUINT32);
+STATUS logSignalingClientStats(PSignalingClientMetrics);
+STATUS logSelectedIceCandidatesInformation(PSampleStreamingSession);
 
 #ifdef __cplusplus
 }
