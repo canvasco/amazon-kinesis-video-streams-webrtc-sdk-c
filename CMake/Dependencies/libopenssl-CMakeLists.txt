@@ -24,7 +24,7 @@ ExternalProject_Add(project_libopenssl
     GIT_TAG           OpenSSL_1_1_1g
     PREFIX            ${CMAKE_CURRENT_BINARY_DIR}/build
     CONFIGURE_COMMAND ${CONFIGURE_COMMAND}
-    BUILD_COMMAND     ${MAKE_EXE}
+    BUILD_COMMAND     ${MAKE_EXE} -j8
     BUILD_IN_SOURCE   TRUE
     INSTALL_COMMAND   ${MAKE_EXE} install_sw
     TEST_COMMAND      ""
