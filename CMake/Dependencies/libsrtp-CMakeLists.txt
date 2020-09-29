@@ -51,6 +51,7 @@ ExternalProject_Add(project_libsrtp
     PREFIX            ${CMAKE_CURRENT_BINARY_DIR}/build
     CMAKE_ARGS        -D CMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
                       -D CMAKE_INSTALL_PREFIX:STRING=${OPEN_SRC_INSTALL_PREFIX}
+                      -D CMAKE_INSTALL_RPATH:STRING=${CMAKE_INSTALL_RPATH}
                       -D ENABLE_OPENSSL=${LIBSRTP_ENABLE_OPENSSL}
                       -D BUILD_SHARED_LIBS=${LIBSRTP_SHARED_LIBS}
                       -D OPENSSL_ROOT_DIR=${OPEN_SRC_INSTALL_PREFIX}
