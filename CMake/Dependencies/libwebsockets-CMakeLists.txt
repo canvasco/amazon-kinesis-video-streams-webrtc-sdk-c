@@ -43,7 +43,8 @@ ExternalProject_Add(project_libwebsockets
         -DLWS_HAVE_EVENTFD=0
         -DLWS_WITH_MBEDTLS=${LWS_WITH_MBEDTLS}
         # change to DEBUG for more logging
-        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+        -DCMAKE_BUILD_TYPE=DEBUG
+#        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
         -DOPENSSL_ROOT_DIR=${OPENSSL_DIR}
         BUILD_ALWAYS      TRUE
     TEST_COMMAND      ""
