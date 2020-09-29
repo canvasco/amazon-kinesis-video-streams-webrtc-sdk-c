@@ -10,7 +10,7 @@ ExternalProject_Add(project_libusrsctp
     PREFIX            ${CMAKE_CURRENT_BINARY_DIR}/build
     CMAKE_ARGS
         -DCMAKE_INSTALL_PREFIX=${OPEN_SRC_INSTALL_PREFIX} -Dsctp_werror=0
-        -DCMAKE_INSTALL_RPATH=${CMAKE_INSTALL_RPATH}
+        -DCMAKE_INSTALL_RPATH=${OPEN_SRC_INSTALL_PREFIX}/lib
     BUILD_ALWAYS      TRUE
     TEST_COMMAND      ""
 )
