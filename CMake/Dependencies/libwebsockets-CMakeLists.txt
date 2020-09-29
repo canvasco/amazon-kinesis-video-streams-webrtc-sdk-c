@@ -24,6 +24,7 @@ ExternalProject_Add(project_libwebsockets
     PREFIX            ${CMAKE_CURRENT_BINARY_DIR}/build
     CMAKE_ARGS
         -DCMAKE_INSTALL_PREFIX=${OPEN_SRC_INSTALL_PREFIX}
+        -DCMAKE_INSTALL_RPATH=${CMAKE_INSTALL_RPATH}
         -DLWS_WITH_HTTP2=0
         -DLWS_HAVE_HMAC_CTX_new=1
         -DLWS_HAVE_SSL_EXTRA_CHAIN_CERTS=1
@@ -41,8 +42,8 @@ ExternalProject_Add(project_libwebsockets
         -DLWS_WITH_ZLIB=0
         -DLWS_HAVE_EVENTFD=0
         -DLWS_WITH_MBEDTLS=${LWS_WITH_MBEDTLS}
-# enable for compilation debug   -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        # change to DEBUG for more logging
+        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
         -DOPENSSL_ROOT_DIR=${OPENSSL_DIR}
         BUILD_ALWAYS      TRUE
     TEST_COMMAND      ""
