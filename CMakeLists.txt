@@ -231,10 +231,10 @@ endif()
 # add_definitions(-DHEAP_DEBUG)
 
 # Uncomment below to add thread id in log
-# add_definitions(-DENABLE_LOG_THREAD_ID)
+add_definitions(-DENABLE_LOG_THREAD_ID)
 
 # Uncomment below line for very verbose logging
-# add_definitions(-DLOG_STREAMING)
+add_definitions(-DLOG_STREAMING)
 
 if (ENABLE_DATA_CHANNEL)
   add_definitions(-DENABLE_DATA_CHANNEL)
