@@ -389,6 +389,10 @@ STATUS dtlsSessionPutApplicationData(PDtlsSession pDtlsSession, PBYTE pData, INT
     MUTEX_LOCK(pDtlsSession->sslLock);
     locked = TRUE;
 
+    DLOGI("dataLen: %d sslCtx: %p conf: %p", dataLen,
+          &pDtlsSession->sslCtx, pDtlsSession->sslCtx.conf);
+
+
     while (iterate && writtenBytes < dataLen) {
         sslRet = mbedtls_ssl_write(&pDtlsSession->sslCtx, pData + writtenBytes, dataLen - writtenBytes);
         if (sslRet > 0) {

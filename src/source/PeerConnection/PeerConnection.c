@@ -459,10 +459,6 @@ VOID onSctpSessionOutboundPacket(UINT64 customData, PBYTE pPacket, UINT32 packet
         return;
     }
 
-    DLOGI("packetLen: %d sslCtx: %p sslCtxConfig: %p", packetLen,
-          pKvsPeerConnection->pDtlsSession->sslCtx,
-          pKvsPeerConnection->pDtlsSession->sslCtxConfig);
-
     pKvsPeerConnection = (PKvsPeerConnection) customData;
     CHK_STATUS(dtlsSessionPutApplicationData(pKvsPeerConnection->pDtlsSession, pPacket, packetLen));
 
