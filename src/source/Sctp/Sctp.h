@@ -11,8 +11,8 @@
 extern "C" {
 #endif
 
-// 1200 - 12 (SCTP header Size)
-#define SCTP_MTU                         1188
+// 1100 - 12 (SCTP header Size)
+#define SCTP_MTU                         1088
 #define SCTP_ASSOCIATION_DEFAULT_PORT    5000
 #define SCTP_DCEP_HEADER_LENGTH          12
 #define SCTP_DCEP_LABEL_LEN_OFFSET       8
