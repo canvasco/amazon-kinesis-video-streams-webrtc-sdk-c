@@ -69,7 +69,7 @@ typedef struct {
 
 STATUS initSctpSession();
 VOID deinitSctpSession();
-STATUS createSctpSession(PSctpSessionCallbacks, PSctpSession*);
+STATUS createSctpSession(PSctpSessionCallbacks, PSctpSession*, UINT16 mtu);
 STATUS freeSctpSession(PSctpSession*);
 STATUS putSctpPacket(PSctpSession, PBYTE, UINT32);
 STATUS sctpSessionWriteMessage(PSctpSession, UINT32, BOOL, PBYTE, UINT32);

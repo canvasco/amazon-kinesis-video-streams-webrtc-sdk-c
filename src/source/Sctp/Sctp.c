@@ -75,7 +75,7 @@ VOID deinitSctpSession()
     }
 }
 
-STATUS createSctpSession(PSctpSessionCallbacks pSctpSessionCallbacks, PSctpSession* ppSctpSession)
+STATUS createSctpSession(PSctpSessionCallbacks pSctpSessionCallbacks, PSctpSession* ppSctpSession, UINT16 mtu)
 {
     ENTERS();
     STATUS retStatus = STATUS_SUCCESS;
@@ -111,7 +111,7 @@ STATUS createSctpSession(PSctpSessionCallbacks pSctpSessionCallbacks, PSctpSessi
 
     memcpy(&params.spp_address, &remoteConn, SIZEOF(remoteConn));
     params.spp_flags = SPP_PMTUD_DISABLE;
-    params.spp_pathmtu = SCTP_MTU;
+    params.spp_pathmtu = mtu - SCTP_DCEP_HEADER_LENGTH;
     CHK(usrsctp_setsockopt(pSctpSession->socket, IPPROTO_SCTP, SCTP_PEER_ADDR_PARAMS, &params, SIZEOF(params)) == 0,
         STATUS_SCTP_SESSION_SETUP_FAILED);
 
