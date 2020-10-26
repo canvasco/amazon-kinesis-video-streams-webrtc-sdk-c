@@ -156,6 +156,7 @@ struct __TurnConnection {
 
     TURN_CONNECTION_DATA_TRANSFER_MODE dataTransferMode;
     KVS_SOCKET_PROTOCOL protocol;
+    UINT16 mtu;
 
     TurnConnectionCallbacks turnConnectionCallbacks;
 
@@ -177,8 +178,8 @@ struct __TurnConnection {
 };
 typedef struct __TurnConnection* PTurnConnection;
 
-STATUS createTurnConnection(PIceServer, TIMER_QUEUE_HANDLE, TURN_CONNECTION_DATA_TRANSFER_MODE, KVS_SOCKET_PROTOCOL, PTurnConnectionCallbacks,
-                            PSocketConnection, PConnectionListener, PTurnConnection*);
+STATUS createTurnConnection(PIceServer, TIMER_QUEUE_HANDLE, TURN_CONNECTION_DATA_TRANSFER_MODE, KVS_SOCKET_PROTOCOL, UINT16,
+                            PTurnConnectionCallbacks, PSocketConnection, PConnectionListener, PTurnConnection*);
 STATUS freeTurnConnection(PTurnConnection*);
 STATUS turnConnectionAddPeer(PTurnConnection, PKvsIpAddress);
 STATUS turnConnectionSendData(PTurnConnection, PBYTE, UINT32, PKvsIpAddress);

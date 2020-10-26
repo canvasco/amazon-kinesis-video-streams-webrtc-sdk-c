@@ -4,7 +4,7 @@
 #define LOG_CLASS "TLS_openssl"
 #include "../Include_i.h"
 
-STATUS createTlsSession(PTlsSessionCallbacks pCallbacks, PTlsSession* ppTlsSession)
+STATUS createTlsSession(PTlsSessionCallbacks pCallbacks, UINT16 mtu, PTlsSession* ppTlsSession)
 {
     ENTERS();
     STATUS retStatus = STATUS_SUCCESS;
@@ -18,6 +18,7 @@ STATUS createTlsSession(PTlsSessionCallbacks pCallbacks, PTlsSession* ppTlsSessi
 
     pTlsSession->callbacks = *pCallbacks;
     pTlsSession->state = TLS_SESSION_STATE_NEW;
+    pTlsSession->mtu = mtu;
 
 CleanUp:
     if (STATUS_FAILED(retStatus) && pTlsSession != NULL) {

@@ -105,6 +105,7 @@ struct __DtlsSession {
     UINT64 dtlsSessionStartTime;
     RTC_DTLS_TRANSPORT_STATE state;
     MUTEX sslLock;
+    UINT16 mtu;
 
 #ifdef KVS_USE_OPENSSL
     volatile ATOMIC_BOOL sslInitFinished;
@@ -137,10 +138,11 @@ struct __DtlsSession {
  * @param BOOL - whether to generate certificate or not
  * @param PRtcCertificate - user provided certificate
  * @param PDtlsSession* - pointer to created DtlsSession object
+ * @param UINT16 - maximum transmission unit for the DTLS session
  *
  * @return STATUS - status of operation
  */
-STATUS createDtlsSession(PDtlsSessionCallbacks, TIMER_QUEUE_HANDLE, INT32, BOOL, PRtcCertificate, PDtlsSession*);
+STATUS createDtlsSession(PDtlsSessionCallbacks, TIMER_QUEUE_HANDLE, INT32, BOOL, PRtcCertificate, PDtlsSession*, UINT16);
 
 /**
  * Free DTLS session. Not thread safe.

@@ -1741,8 +1741,10 @@ STATUS iceAgentInitRelayCandidate(PIceAgent pIceAgent, UINT32 iceServerIndex, KV
     pNewCandidate->priority = computeCandidatePriority(pNewCandidate);
 
     CHK_STATUS(createTurnConnection(&pIceAgent->iceServers[iceServerIndex], pIceAgent->timerQueueHandle,
-                                    TURN_CONNECTION_DATA_TRANSFER_MODE_SEND_INDIDATION, protocol, NULL, pNewCandidate->pSocketConnection,
-                                    pIceAgent->pConnectionListener, &pTurnConnection));
+                                    TURN_CONNECTION_DATA_TRANSFER_MODE_SEND_INDIDATION, protocol,
+                                    pIceAgent->kvsRtcConfiguration.maximumTransmissionUnit, NULL,
+                                    pNewCandidate->pSocketConnection, pIceAgent->pConnectionListener,
+                                    &pTurnConnection));
     pNewCandidate->pIceAgent = pIceAgent;
     pNewCandidate->pTurnConnection = pTurnConnection;
 

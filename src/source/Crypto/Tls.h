@@ -33,6 +33,7 @@ typedef struct __TlsSession TlsSession, *PTlsSession;
 struct __TlsSession {
     TlsSessionCallbacks callbacks;
     TLS_SESSION_STATE state;
+    UINT16 mtu;
 
 #ifdef KVS_USE_OPENSSL
     SSL_CTX* pSslCtx;
@@ -54,11 +55,12 @@ struct __TlsSession {
  * Create TLS session.
  * NOT THREAD SAFE.
  * @param PTlsSessionCallbacks - callbacks
+ * @param UINT16 - the MTU for TLS session packets
  * @param PTlsSession* - pointer to created TlsSession object
  *
  * @return STATUS - status of operation
  */
-STATUS createTlsSession(PTlsSessionCallbacks, PTlsSession*);
+STATUS createTlsSession(PTlsSessionCallbacks, UINT16, PTlsSession*);
 
 /**
  * Free TLS session. Not thread safe.

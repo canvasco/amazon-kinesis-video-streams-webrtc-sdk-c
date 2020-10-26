@@ -5,8 +5,8 @@
 #include "../Include_i.h"
 
 STATUS createTurnConnection(PIceServer pTurnServer, TIMER_QUEUE_HANDLE timerQueueHandle, TURN_CONNECTION_DATA_TRANSFER_MODE dataTransferMode,
-                            KVS_SOCKET_PROTOCOL protocol, PTurnConnectionCallbacks pTurnConnectionCallbacks, PSocketConnection pTurnSocket,
-                            PConnectionListener pConnectionListener, PTurnConnection* ppTurnConnection)
+                            KVS_SOCKET_PROTOCOL protocol, UINT16 mtu, PTurnConnectionCallbacks pTurnConnectionCallbacks,
+                            PSocketConnection pTurnSocket, PConnectionListener pConnectionListener, PTurnConnection* ppTurnConnection)
 {
     UNUSED_PARAM(dataTransferMode);
     ENTERS();
@@ -40,6 +40,7 @@ STATUS createTurnConnection(PIceServer pTurnServer, TIMER_QUEUE_HANDLE timerQueu
     pTurnConnection->protocol = protocol;
     pTurnConnection->relayAddressReported = FALSE;
     pTurnConnection->pControlChannel = pTurnSocket;
+    pTurnConnection->mtu = mtu;
 
     ATOMIC_STORE_BOOL(&pTurnConnection->stopTurnConnection, FALSE);
     ATOMIC_STORE_BOOL(&pTurnConnection->hasAllocation, FALSE);
@@ -900,7 +901,7 @@ STATUS turnConnectionStepState(PTurnConnection pTurnConnection)
                 /* We dont support DTLS and TCP, so only options are TCP/TLS and UDP. */
                 /* TODO: add plain TCP once it becomes available. */
                 if (pTurnConnection->protocol == KVS_SOCKET_PROTOCOL_TCP && pTurnConnection->pControlChannel->pTlsSession == NULL) {
-                    CHK_STATUS(socketConnectionInitSecureConnection(pTurnConnection->pControlChannel, FALSE));
+                    CHK_STATUS(socketConnectionInitSecureConnection(pTurnConnection->pControlChannel, pTurnConnection->mtu, FALSE));
                 }
 
                 pTurnConnection->state = TURN_STATE_GET_CREDENTIALS;
