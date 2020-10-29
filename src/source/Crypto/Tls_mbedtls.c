@@ -4,23 +4,20 @@
 #define LOG_CLASS "TLS_mbedtls"
 #include "../Include_i.h"
 
-STATUS createTlsSession(PTlsSessionCallbacks pCallbacks, UINT16 mtu, PTlsSession* ppTlsSession)
+STATUS createTlsSession(PTlsSessionCallbacks pCallbacks, PTlsSession* ppTlsSession)
 {
     ENTERS();
     STATUS retStatus = STATUS_SUCCESS;
     PTlsSession pTlsSession = NULL;
-    UINT16 read_mtu;
 
     CHK(ppTlsSession != NULL && pCallbacks != NULL && pCallbacks->outboundPacketFn != NULL, STATUS_NULL_ARG);
 
     pTlsSession = (PTlsSession) MEMCALLOC(1, SIZEOF(TlsSession));
     CHK(pTlsSession != NULL, STATUS_NOT_ENOUGH_MEMORY);
 
-    read_mtu = (mtu > DEFAULT_MTU_SIZE) ? mtu : DEFAULT_MTU_SIZE;
-    CHK_STATUS(createIOBuffer(read_mtu, &pTlsSession->pReadBuffer));
+    CHK_STATUS(createIOBuffer(DEFAULT_MTU_SIZE, &pTlsSession->pReadBuffer));
     pTlsSession->callbacks = *pCallbacks;
     pTlsSession->state = TLS_SESSION_STATE_NEW;
-    pTlsSession->mtu = mtu;
 
     // initialize mbedtls stuff with sane values
     mbedtls_entropy_init(&pTlsSession->entropy);
@@ -120,7 +117,7 @@ STATUS tlsSessionStart(PTlsSession pTlsSession, BOOL isServer)
     mbedtls_ssl_conf_authmode(&pTlsSession->sslCtxConfig, MBEDTLS_SSL_VERIFY_REQUIRED);
     mbedtls_ssl_conf_rng(&pTlsSession->sslCtxConfig, mbedtls_ctr_drbg_random, &pTlsSession->ctrDrbg);
     CHK(mbedtls_ssl_setup(&pTlsSession->sslCtx, &pTlsSession->sslCtxConfig) == 0, STATUS_SSL_CTX_CREATION_FAILED);
-    mbedtls_ssl_set_mtu(&pTlsSession->sslCtx, pTlsSession->mtu);
+    mbedtls_ssl_set_mtu(&pTlsSession->sslCtx, DEFAULT_MTU_SIZE);
     mbedtls_ssl_set_bio(&pTlsSession->sslCtx, pTlsSession, tlsSessionSendCallback, tlsSessionReceiveCallback, NULL);
 
     /* init and send handshake */

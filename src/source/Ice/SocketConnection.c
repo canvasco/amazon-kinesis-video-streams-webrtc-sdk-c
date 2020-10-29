@@ -127,7 +127,7 @@ VOID socketConnectionTlsSessionOnStateChange(UINT64 customData, TLS_SESSION_STAT
     }
 }
 
-STATUS socketConnectionInitSecureConnection(PSocketConnection pSocketConnection, UINT16 mtu, BOOL isServer)
+STATUS socketConnectionInitSecureConnection(PSocketConnection pSocketConnection, BOOL isServer)
 {
     ENTERS();
     TlsSessionCallbacks callbacks;
@@ -140,7 +140,7 @@ STATUS socketConnectionInitSecureConnection(PSocketConnection pSocketConnection,
     callbacks.outboundPacketFn = socketConnectionTlsSessionOutBoundPacket;
     callbacks.stateChangeFn = socketConnectionTlsSessionOnStateChange;
 
-    CHK_STATUS(createTlsSession(&callbacks, mtu, &pSocketConnection->pTlsSession));
+    CHK_STATUS(createTlsSession(&callbacks, &pSocketConnection->pTlsSession));
     CHK_STATUS(tlsSessionStart(pSocketConnection->pTlsSession, isServer));
     pSocketConnection->secureConnection = TRUE;
 

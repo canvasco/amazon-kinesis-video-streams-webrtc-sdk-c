@@ -75,12 +75,11 @@ STATUS freeSocketConnection(PSocketConnection*);
  * Given a created SocketConnection, initialize TLS or DTLS handshake depending on the socket protocol
  *
  * @param - PSocketConnection - IN - the SocketConnection struct
- * @param - UINT16 - IN - the MTU to use for the scoket connection
  * @param - BOOL - IN - will SocketConnection act as server during the TLS or DTLS handshake
  *
  * @return - STATUS - status of execution
  */
-STATUS socketConnectionInitSecureConnection(PSocketConnection, UINT16, BOOL);
+STATUS socketConnectionInitSecureConnection(PSocketConnection, BOOL);
 
 /**
  * Given a created SocketConnection, send data through the underlying socket. If socket type is UDP, then destination

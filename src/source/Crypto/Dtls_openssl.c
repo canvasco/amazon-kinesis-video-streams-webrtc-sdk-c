@@ -264,7 +264,7 @@ CleanUp:
 }
 
 STATUS createDtlsSession(PDtlsSessionCallbacks pDtlsSessionCallbacks, TIMER_QUEUE_HANDLE timerQueueHandle, INT32 certificateBits,
-                         BOOL generateRSACertificate, PRtcCertificate pRtcCertificates, PDtlsSession* ppDtlsSession, UINT16 mtu)
+                         BOOL generateRSACertificate, PRtcCertificate pRtcCertificates, PDtlsSession* ppDtlsSession)
 {
     ENTERS();
     STATUS retStatus = STATUS_SUCCESS;
@@ -279,7 +279,6 @@ STATUS createDtlsSession(PDtlsSessionCallbacks pDtlsSessionCallbacks, TIMER_QUEU
     pDtlsSession = MEMCALLOC(SIZEOF(DtlsSession), 1);
     CHK(pDtlsSession != NULL, STATUS_NOT_ENOUGH_MEMORY);
 
-    pDtlsSession->mtu = mtu;
     pDtlsSession->timerQueueHandle = timerQueueHandle;
     pDtlsSession->timerId = MAX_UINT32;
     pDtlsSession->sslLock = MUTEX_CREATE(TRUE);
