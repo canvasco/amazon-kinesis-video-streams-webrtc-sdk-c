@@ -89,11 +89,12 @@ if(BUILD_DEPENDENCIES)
   endif()
 
   if (USE_OPENSSL)
-    set(BUILD_ARGS -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
-                   -DBUILD_OPENSSL_PLATFORM=${BUILD_OPENSSL_PLATFORM}
-                   -DOPENSSL_EXTRA=${OPENSSL_EXTRA})
-    build_dependency(openssl ${BUILD_ARGS})
-    set(OPENSSL_ROOT_DIR ${OPEN_SRC_INSTALL_PREFIX})
+#    set(BUILD_ARGS -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
+#                   -DBUILD_OPENSSL_PLATFORM=${BUILD_OPENSSL_PLATFORM}
+#                   -DOPENSSL_EXTRA=${OPENSSL_EXTRA})
+#    build_dependency(openssl ${BUILD_ARGS})
+#    set(OPENSSL_ROOT_DIR ${OPEN_SRC_INSTALL_PREFIX})
+     find_package(OpenSSL REQUIRED)
   elseif(USE_MBEDTLS)
     set(BUILD_ARGS -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS})
     build_dependency(mbedtls ${BUILD_ARGS})
