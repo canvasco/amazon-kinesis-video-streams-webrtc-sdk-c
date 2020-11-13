@@ -97,7 +97,7 @@ STATUS resendPacketOnNack(PRtcpPacket pRtcpPacket, PKvsPeerConnection pKvsPeerCo
             if (STATUS_SUCCEEDED(retStatus)) {
                 retransmittedPacketsSent++;
                 retransmittedBytesSent += pRtpPacket->rawPacketLength - RTP_HEADER_LEN(pRtpPacket);
-                DLOGV("Resent packet ssrc %lu seq %lu succeeded", pRtpPacket->header.ssrc, pRtpPacket->header.sequenceNumber);
+                DLOGV("Resent packet ssrc %lu seq %lu pktlen %lu succeeded", pRtpPacket->header.ssrc, pRtpPacket->header.sequenceNumber, pRtpPacket->rawPacketLength);
             } else {
                 DLOGV("Resent packet ssrc %lu seq %lu failed 0x%08x", pRtpPacket->header.ssrc, pRtpPacket->header.sequenceNumber, retStatus);
             }

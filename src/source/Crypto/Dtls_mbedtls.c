@@ -395,10 +395,13 @@ STATUS dtlsSessionPutApplicationData(PDtlsSession pDtlsSession, PBYTE pData, INT
         sslRet = mbedtls_ssl_write(&pDtlsSession->sslCtx, pData + writtenBytes, writeLen);
         if (sslRet > 0) {
             writtenBytes += sslRet;
+            DLOGV("Wrote %d bytes.", sslRet);
         } else if (sslRet == MBEDTLS_ERR_SSL_WANT_READ || sslRet == MBEDTLS_ERR_SSL_WANT_WRITE) {
             iterate = FALSE;
+            DLOGV("Didn't want write, retval is %x", sslRet);
         } else {
             LOG_MBEDTLS_ERROR("mbedtls_ssl_write", sslRet);
+            DLOGV("Internal error, retval is %x", sslRet);
             writtenBytes = 0;
             retStatus = STATUS_INTERNAL_ERROR;
             iterate = FALSE;
