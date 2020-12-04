@@ -89,11 +89,23 @@ if(BUILD_DEPENDENCIES)
   endif()
 
   if (USE_OPENSSL)
-    set(BUILD_ARGS -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
-                   -DBUILD_OPENSSL_PLATFORM=${BUILD_OPENSSL_PLATFORM}
-                   -DOPENSSL_EXTRA=${OPENSSL_EXTRA})
-    build_dependency(openssl ${BUILD_ARGS})
-    set(OPENSSL_ROOT_DIR ${OPEN_SRC_INSTALL_PREFIX})
+  # Canvas specific customization of the offical upstream CMakeLists.
+  #
+  # Change Summary: Comment out the call to build OpenSSL
+  #
+  # This change allows build_dependencies to be on; however, OpenSSL
+  # is not built from source because other dependencies are likely to
+  # rely on the distro (system installed) OpenSSL. This is preferable 
+  # because it pushes the management of OpenSSL to the package manager
+  # which ensures OpenSSL aligns for all of the software on the host.
+  # It also ensures only one copy of OpenSSL which must be up to date
+  # to keep the host secure.
+  #  
+  #  set(BUILD_ARGS -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
+  #                 -DBUILD_OPENSSL_PLATFORM=${BUILD_OPENSSL_PLATFORM}
+  #                 -DOPENSSL_EXTRA=${OPENSSL_EXTRA})
+  #  build_dependency(openssl ${BUILD_ARGS})
+  #  set(OPENSSL_ROOT_DIR ${OPEN_SRC_INSTALL_PREFIX})
   elseif(USE_MBEDTLS)
     set(BUILD_ARGS -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS})
     build_dependency(mbedtls ${BUILD_ARGS})
