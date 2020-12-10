@@ -100,12 +100,13 @@ if(BUILD_DEPENDENCIES)
   # which ensures OpenSSL aligns for all of the software on the host.
   # It also ensures only one copy of OpenSSL which must be up to date
   # to keep the host secure.
-  #  
+  # ----------------------------BEGIN CANVAS CUSTOMIZATION
   #  set(BUILD_ARGS -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS}
   #                 -DBUILD_OPENSSL_PLATFORM=${BUILD_OPENSSL_PLATFORM}
   #                 -DOPENSSL_EXTRA=${OPENSSL_EXTRA})
   #  build_dependency(openssl ${BUILD_ARGS})
   #  set(OPENSSL_ROOT_DIR ${OPEN_SRC_INSTALL_PREFIX})
+  # ----------------------------END CANVAS CUSTOMIZATION
   elseif(USE_MBEDTLS)
     set(BUILD_ARGS -DBUILD_STATIC_LIBS=${BUILD_STATIC_LIBS})
     build_dependency(mbedtls ${BUILD_ARGS})
