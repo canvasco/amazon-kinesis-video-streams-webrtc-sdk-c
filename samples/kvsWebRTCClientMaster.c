@@ -12,6 +12,8 @@ INT32 main(INT32 argc, CHAR* argv[])
     SignalingClientMetrics signalingClientMetrics;
     signalingClientMetrics.version = 0;
 
+    SET_INSTRUMENTED_ALLOCATORS();
+
 #ifndef _WIN32
     signal(SIGINT, sigintHandler);
 #endif
@@ -113,15 +115,8 @@ CleanUp:
         // Kick of the termination sequence
         ATOMIC_STORE_BOOL(&pSampleConfiguration->appTerminateFlag, TRUE);
 
-        // Join the threads
-        if (pSampleConfiguration->videoSenderTid != (UINT64) NULL) {
-            // Join the threads
-            THREAD_JOIN(pSampleConfiguration->videoSenderTid, NULL);
-        }
-
-        if (pSampleConfiguration->audioSenderTid != (UINT64) NULL) {
-            // Join the threads
-            THREAD_JOIN(pSampleConfiguration->audioSenderTid, NULL);
+        if (pSampleConfiguration->mediaSenderTid != INVALID_TID_VALUE) {
+            THREAD_JOIN(pSampleConfiguration->mediaSenderTid, NULL);
         }
 
         if (pSampleConfiguration->enableFileLogging) {
@@ -144,6 +139,8 @@ CleanUp:
         }
     }
     printf("[KVS Master] Cleanup done\n");
+
+    RESET_INSTRUMENTED_ALLOCATORS();
 
     // https://www.gnu.org/software/libc/manual/html_node/Exit-Status.html
     // We can only return with 0 - 127. Some platforms treat exit code >= 128
@@ -215,10 +212,10 @@ PVOID sendVideoPackets(PVOID args)
 
         // Re-alloc if needed
         if (frameSize > pSampleConfiguration->videoBufferSize) {
-            pSampleConfiguration->pVideoFrameBuffer = (PBYTE) realloc(pSampleConfiguration->pVideoFrameBuffer, frameSize);
+            pSampleConfiguration->pVideoFrameBuffer = (PBYTE) MEMREALLOC(pSampleConfiguration->pVideoFrameBuffer, frameSize);
             if (pSampleConfiguration->pVideoFrameBuffer == NULL) {
                 printf("[KVS Master] Video frame Buffer reallocation failed...%s (code %d)\n", strerror(errno), errno);
-                printf("[KVS Master] realloc(): operation returned status code: 0x%08x \n", STATUS_NOT_ENOUGH_MEMORY);
+                printf("[KVS Master] MEMREALLOC(): operation returned status code: 0x%08x \n", STATUS_NOT_ENOUGH_MEMORY);
                 goto CleanUp;
             }
 
@@ -266,6 +263,8 @@ PVOID sendVideoPackets(PVOID args)
 
 CleanUp:
 
+    CHK_LOG_ERR(retStatus);
+
     return (PVOID)(ULONG_PTR) retStatus;
 }
 
@@ -298,10 +297,10 @@ PVOID sendAudioPackets(PVOID args)
 
         // Re-alloc if needed
         if (frameSize > pSampleConfiguration->audioBufferSize) {
-            pSampleConfiguration->pAudioFrameBuffer = (UINT8*) realloc(pSampleConfiguration->pAudioFrameBuffer, frameSize);
+            pSampleConfiguration->pAudioFrameBuffer = (UINT8*) MEMREALLOC(pSampleConfiguration->pAudioFrameBuffer, frameSize);
             if (pSampleConfiguration->pAudioFrameBuffer == NULL) {
                 printf("[KVS Master] Audio frame Buffer reallocation failed...%s (code %d)\n", strerror(errno), errno);
-                printf("[KVS Master] realloc(): operation returned status code: 0x%08x \n", STATUS_NOT_ENOUGH_MEMORY);
+                printf("[KVS Master] MEMREALLOC(): operation returned status code: 0x%08x \n", STATUS_NOT_ENOUGH_MEMORY);
                 goto CleanUp;
             }
         }

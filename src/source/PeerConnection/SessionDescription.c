@@ -1,6 +1,5 @@
 #define LOG_CLASS "SessionDescription"
 #include "../Include_i.h"
-#include "jsmn.h"
 
 STATUS serializeSessionDescriptionInit(PRtcSessionDescriptionInit pSessionDescriptionInit, PCHAR sessionDescriptionJSON,
                                        PUINT32 sessionDescriptionJSONLen)
@@ -58,8 +57,7 @@ STATUS deserializeSessionDescriptionInit(PCHAR sessionDescriptionJSON, UINT32 se
     STATUS retStatus = STATUS_SUCCESS;
     jsmntok_t tokens[MAX_JSON_TOKEN_COUNT];
     jsmn_parser parser;
-    INT8 i;
-    INT32 j, tokenCount, lineLen;
+    INT32 i, j, tokenCount, lineLen;
     PCHAR curr, next, tail;
 
     CHK(pSessionDescriptionInit != NULL && sessionDescriptionJSON != NULL, STATUS_NULL_ARG);
@@ -146,52 +144,6 @@ CleanUp:
 }
 
 /*
- * Extracts a (hex) value after the provided prefix string. Returns true if
- * successful.
- */
-static BOOL readHexValue(const PCHAR input, const PCHAR prefix, PINT32 value) {
-  const PCHAR substr = STRSTR(input, prefix);
-  if (substr != NULL) {
-    if (sscanf(substr + STRLEN(prefix), "%x", value) == 1) {
-      return TRUE;
-    }
-  }
-  return FALSE;
-}
-
-static BOOL isH264FmtpMatch(PCHAR fmtp) {
-  INT32 profileId, packetizationMode, levelAsymmetry;
-
-  // All H264 matches must be profile level 0x42e01f
-  if (readHexValue(fmtp, "profile-level-id=", &profileId) != TRUE ||
-      profileId != 0x42e01f) {
-      DLOGV("Not a profile match");
-      return FALSE;
-  }
-
-  // Packetization mode must be 1, as this library only supports SENDING
-  // of FU-A and single NAL unit messages, which implies outbound support
-  // for only packetization-mode=1. Note that inbound this library may
-  // support packetization-mode=0, e.g. in rcvonly cases.
-  //
-  // https://tools.ietf.org/html/rfc7742#section-6.2
-  if (readHexValue(fmtp, "packetization-mode=", &packetizationMode) != TRUE ||
-      packetizationMode != 1) {
-      DLOGV("Not a packetization match");
-      return FALSE;
-  }
-
-  if (readHexValue(fmtp, "level-asymmetry-allowed=", &levelAsymmetry) != TRUE ||
-      levelAsymmetry != 1) {
-      DLOGV("Not a level asymmetry match");
-      return FALSE;
-  }
-
-  // All criteria are met.
-  return TRUE;
-}
-
-/*
  * Populate map with PayloadTypes for codecs a KvsPeerConnection has enabled.
  */
 STATUS setPayloadTypesFromOffer(PHashTable codecTable, PHashTable rtxTable, PSessionDescription pSessionDescription)
@@ -206,10 +158,13 @@ STATUS setPayloadTypesFromOffer(PHashTable codecTable, PHashTable rtxTable, PSes
     UINT16 aptFmtVal;
     BOOL supportCodec;
     UINT32 tokenLen, i, aptFmtpValCount;
+    PCHAR fmtp;
+    UINT64 fmtpScore, bestFmtpScore;
 
     for (currentMedia = 0; currentMedia < pSessionDescription->mediaCount; currentMedia++) {
         pMediaDescription = &(pSessionDescription->mediaDescriptions[currentMedia]);
         aptFmtpValCount = 0;
+        bestFmtpScore = 0;
         attributeValue = pMediaDescription->mediaName;
         do {
             if ((end = STRCHR(attributeValue, ' ')) != NULL) {
@@ -235,14 +190,15 @@ STATUS setPayloadTypesFromOffer(PHashTable codecTable, PHashTable rtxTable, PSes
             CHK_STATUS(hashTableContains(codecTable, RTC_CODEC_H264_PROFILE_42E01F_LEVEL_ASYMMETRY_ALLOWED_PACKETIZATION_MODE, &supportCodec));
             if (supportCodec && (end = STRSTR(attributeValue, H264_VALUE)) != NULL) {
                 CHK_STATUS(STRTOUI64(attributeValue, end - 1, 10, &parsedPayloadType));
-                PCHAR fmtp = fmtpForPayloadType(parsedPayloadType, pSessionDescription);
-                if (fmtp != NULL && isH264FmtpMatch(fmtp)) {
-                    DLOGV("Payload type %" PRId64 " - found exact fmtp description match %s", parsedPayloadType, fmtp);
-                    CHK_STATUS(hashTableUpsert(codecTable, RTC_CODEC_H264_PROFILE_42E01F_LEVEL_ASYMMETRY_ALLOWED_PACKETIZATION_MODE, parsedPayloadType));
-                } else if (fmtp != NULL) {
-                    DLOGV("Payload type %" PRId64 " - no exact match for fmtp description %s", parsedPayloadType, fmtp);
-                } else {
-                    DLOGV("Payload type %" PRId64 " lacks any fmtp description.", parsedPayloadType);
+                fmtp = fmtpForPayloadType(parsedPayloadType, pSessionDescription);
+                fmtpScore = getH264FmtpScore(fmtp);
+                // When there's no match, the last fmtp will be chosen. This will allow us to not break existing customers who might be using
+                // flexible decoders which can infer the video profile from the SPS header.
+                if (fmtpScore >= bestFmtpScore) {
+                    DLOGV("Found H264 payload type %" PRId64 " with score %lu: %s", parsedPayloadType, fmtpScore, fmtp);
+                    CHK_STATUS(
+                        hashTableUpsert(codecTable, RTC_CODEC_H264_PROFILE_42E01F_LEVEL_ASYMMETRY_ALLOWED_PACKETIZATION_MODE, parsedPayloadType));
+                    bestFmtpScore = fmtpScore;
                 }
             }
 
@@ -369,6 +325,62 @@ PCHAR fmtpForPayloadType(UINT64 payloadType, PSessionDescription pSessionDescrip
     }
 
     return NULL;
+}
+
+/*
+ * Extracts a (hex) value after the provided prefix string. Returns true if
+ * successful.
+ */
+BOOL readHexValue(PCHAR input, PCHAR prefix, PUINT32 value)
+{
+    PCHAR substr = STRSTR(input, prefix);
+    if (substr != NULL && SSCANF(substr + STRLEN(prefix), "%x", value) == 1) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/*
+ * Scores the provided fmtp string based on this library's ability to
+ * process various types of H264 streams. A score of 0 indicates an
+ * incompatible fmtp line. Beyond this, a higher score indicates more
+ * compatibility with the desired characteristics, packetization-mode=1,
+ * level-asymmetry-allowed=1, and inbound match with our preferred
+ * profile-level-id.
+ *
+ * At some future time, it may be worth expressing this as a true distance
+ * function as defined here, although dealing with infinite floating point
+ * values can get tricky:
+ * https://www.w3.org/TR/mediacapture-streams/#dfn-fitness-distance
+ */
+UINT64 getH264FmtpScore(PCHAR fmtp)
+{
+    UINT32 profileId = 0, packetizationMode = 0, levelAsymmetry = 0;
+    UINT64 score = 0;
+
+    // No ftmp match found.
+    if (fmtp == NULL) {
+        return 0;
+    }
+
+    // Currently, the packetization mode must be 1, as the packetization logic
+    // is currently not configurable, and sends both NALU and FU-A packets.
+    // https://tools.ietf.org/html/rfc7742#section-6.2
+    if (readHexValue(fmtp, "packetization-mode=", &packetizationMode) && packetizationMode == 1) {
+        score++;
+    }
+
+    if (readHexValue(fmtp, "profile-level-id=", &profileId) &&
+        (profileId & H264_FMTP_SUBPROFILE_MASK) == (H264_PROFILE_42E01F & H264_FMTP_SUBPROFILE_MASK) &&
+        (profileId & H264_FMTP_PROFILE_LEVEL_MASK) <= (H264_PROFILE_42E01F & H264_FMTP_PROFILE_LEVEL_MASK)) {
+        score++;
+    }
+
+    if (readHexValue(fmtp, "level-asymmetry-allowed=", &levelAsymmetry) && levelAsymmetry == 1) {
+        score++;
+    }
+
+    return score;
 }
 
 // Populate a single media section from a PKvsRtpTransceiver
@@ -551,6 +563,7 @@ STATUS populateSingleMediaSection(PKvsPeerConnection pKvsPeerConnection, PKvsRtp
         SPRINTF(pSdpMediaDescription->sdpAttributes[attributeCount].attributeValue, "%" PRId64 " H264/90000", payloadType);
         attributeCount++;
 
+        // TODO: If level asymmetry is allowed, consider sending back DEFAULT_H264_FMTP instead of the received fmtp value.
         if (currentFmtp != NULL) {
             STRCPY(pSdpMediaDescription->sdpAttributes[attributeCount].attributeName, "fmtp");
             SPRINTF(pSdpMediaDescription->sdpAttributes[attributeCount].attributeValue, "%" PRId64 " %s", payloadType, currentFmtp);
@@ -607,6 +620,16 @@ STATUS populateSingleMediaSection(PKvsPeerConnection pKvsPeerConnection, PKvsRtp
     STRCPY(pSdpMediaDescription->sdpAttributes[attributeCount].attributeName, "rtcp-fb");
     SPRINTF(pSdpMediaDescription->sdpAttributes[attributeCount].attributeValue, "%" PRId64 " nack", payloadType);
     attributeCount++;
+
+    STRCPY(pSdpMediaDescription->sdpAttributes[attributeCount].attributeName, "rtcp-fb");
+    SPRINTF(pSdpMediaDescription->sdpAttributes[attributeCount].attributeValue, "%" PRId64 " goog-remb", payloadType);
+    attributeCount++;
+
+    if (pKvsPeerConnection->twccExtId != 0) {
+        STRCPY(pSdpMediaDescription->sdpAttributes[attributeCount].attributeName, "rtcp-fb");
+        SPRINTF(pSdpMediaDescription->sdpAttributes[attributeCount].attributeValue, "%" PRId64 " " TWCC_SDP_ATTR, payloadType);
+        attributeCount++;
+    }
 
     pSdpMediaDescription->mediaAttributesCount = attributeCount;
 
@@ -767,6 +790,7 @@ STATUS populateSessionDescription(PKvsPeerConnection pKvsPeerConnection, PSessio
     CHAR bundleValue[MAX_SDP_ATTRIBUTE_VALUE_LENGTH], wmsValue[MAX_SDP_ATTRIBUTE_VALUE_LENGTH];
     PCHAR curr = NULL;
     UINT32 i, sizeRemaining;
+    INT32 charsCopied;
 
     CHK(pKvsPeerConnection != NULL && pLocalSessionDescription != NULL && pRemoteSessionDescription != NULL, STATUS_NULL_ARG);
 
@@ -797,7 +821,11 @@ STATUS populateSessionDescription(PKvsPeerConnection pKvsPeerConnection, PSessio
         STRCPY(pLocalSessionDescription->mediaDescriptions[i].sdpConnectionInformation.connectionAddress, "127.0.0.1");
 
         sizeRemaining = MAX_SDP_ATTRIBUTE_VALUE_LENGTH - (curr - pLocalSessionDescription->sdpAttributes[0].attributeValue);
-        curr += SNPRINTF(curr, sizeRemaining, " %d", i);
+        charsCopied = SNPRINTF(curr, sizeRemaining, " %d", i);
+
+        CHK(charsCopied > 0 && (UINT32) charsCopied < sizeRemaining, STATUS_BUFFER_TOO_SMALL);
+
+        curr += charsCopied;
     }
     pLocalSessionDescription->sessionAttributesCount++;
 
@@ -936,8 +964,7 @@ STATUS deserializeRtcIceCandidateInit(PCHAR pJson, UINT32 jsonLen, PRtcIceCandid
     STATUS retStatus = STATUS_SUCCESS;
     jsmntok_t tokens[MAX_JSON_TOKEN_COUNT];
     jsmn_parser parser;
-    INT8 i;
-    INT32 tokenCount;
+    INT32 i, tokenCount;
 
     CHK(pRtcIceCandidateInit != NULL && pJson != NULL, STATUS_NULL_ARG);
     MEMSET(pRtcIceCandidateInit->candidate, 0x00, MAX_ICE_CANDIDATE_INIT_CANDIDATE_LEN + 1);

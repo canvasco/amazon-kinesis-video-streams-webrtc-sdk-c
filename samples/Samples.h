@@ -25,10 +25,12 @@ extern "C" {
 #define SAMPLE_STATS_DURATION       (60 * HUNDREDS_OF_NANOS_IN_A_SECOND)
 #define SAMPLE_VIDEO_FRAME_DURATION (HUNDREDS_OF_NANOS_IN_A_SECOND / DEFAULT_FPS_VALUE)
 
+#define SAMPLE_PRE_GENERATE_CERT        TRUE
+#define SAMPLE_PRE_GENERATE_CERT_PERIOD (1000 * HUNDREDS_OF_NANOS_IN_A_MILLISECOND)
+
 #define SAMPLE_SESSION_CLEANUP_WAIT_PERIOD (5 * HUNDREDS_OF_NANOS_IN_A_SECOND)
 
-#define ASYNC_ICE_CONFIG_INFO_WAIT_TIMEOUT (3 * HUNDREDS_OF_NANOS_IN_A_SECOND)
-#define ICE_CONFIG_INFO_POLL_PERIOD        (20 * HUNDREDS_OF_NANOS_IN_A_MILLISECOND)
+#define SAMPLE_PENDING_MESSAGE_CLEANUP_DURATION (20 * HUNDREDS_OF_NANOS_IN_A_SECOND)
 
 #define CA_CERT_PEM_FILE_EXTENSION ".pem"
 
@@ -60,6 +62,7 @@ typedef struct {
     volatile ATOMIC_BOOL interrupted;
     volatile ATOMIC_BOOL mediaThreadStarted;
     volatile ATOMIC_BOOL recreateSignalingClient;
+    volatile ATOMIC_BOOL connected;
     BOOL useTestSrc;
     ChannelInfo channelInfo;
     PCHAR pCaCertPath;
@@ -69,8 +72,7 @@ typedef struct {
     UINT32 audioBufferSize;
     PBYTE pVideoFrameBuffer;
     UINT32 videoBufferSize;
-    TID videoSenderTid;
-    TID audioSenderTid;
+    TID mediaSenderTid;
     TIMER_QUEUE_HANDLE timerQueueHandle;
     UINT32 iceCandidatePairStatsTimerId;
     SampleStreamingMediaType mediaType;
@@ -80,7 +82,7 @@ typedef struct {
     RtcOnDataChannel onDataChannel;
 
     TID signalingProcessor;
-    PHashTable pPendingSignalingMessageForRemoteClient;
+    PStackQueue pPendingSignalingMessageForRemoteClient;
     PHashTable pRtcPeerConnectionForRemoteClient;
 
     MUTEX sampleConfigurationObjLock;
@@ -98,7 +100,16 @@ typedef struct {
     RtcStats rtcIceCandidatePairMetrics;
 
     MUTEX signalingSendMessageLock;
+
+    UINT32 pregenerateCertTimerId;
+    PStackQueue pregeneratedCertificates; // Max MAX_RTCCONFIGURATION_CERTIFICATES certificates
 } SampleConfiguration, *PSampleConfiguration;
+
+typedef struct {
+    UINT64 hashValue;
+    UINT64 createTime;
+    PStackQueue messageQueue;
+} PendingMessageQueue, *PPendingMessageQueue;
 
 typedef VOID (*StreamSessionShutdownCallback)(UINT64, PSampleStreamingSession);
 
@@ -112,8 +123,8 @@ struct __SampleStreamingSession {
     PRtcRtpTransceiver pAudioRtcRtpTransceiver;
     RtcSessionDescriptionInit answerSessionDescriptionInit;
     PSampleConfiguration pSampleConfiguration;
-    UINT32 audioTimestamp;
-    UINT32 videoTimestamp;
+    UINT64 audioTimestamp;
+    UINT64 videoTimestamp;
     CHAR peerId[MAX_SIGNALING_CLIENT_ID_LEN + 1];
     TID receiveAudioVideoSenderTid;
     UINT64 offerReceiveTime;
@@ -134,11 +145,12 @@ PVOID sendAudioPackets(PVOID);
 PVOID sendGstreamerAudioVideo(PVOID);
 PVOID sampleReceiveVideoFrame(PVOID args);
 PVOID getPeriodicIceCandidatePairStats(PVOID);
-STATUS getIceCandidatePairStatsCallback(UINT32 timerId, UINT64 currentTime, UINT64 customData);
+STATUS getIceCandidatePairStatsCallback(UINT32, UINT64, UINT64);
+STATUS pregenerateCertTimerCallback(UINT32, UINT64, UINT64);
 STATUS createSampleConfiguration(PCHAR, SIGNALING_CHANNEL_ROLE_TYPE, BOOL, BOOL, PSampleConfiguration*);
 STATUS freeSampleConfiguration(PSampleConfiguration*);
 STATUS signalingClientStateChanged(UINT64, SIGNALING_CLIENT_STATE);
-STATUS signalingMessageReceived(UINT64 customData, PReceivedSignalingMessage pReceivedSignalingMessage);
+STATUS signalingMessageReceived(UINT64, PReceivedSignalingMessage);
 STATUS handleAnswer(PSampleConfiguration, PSampleStreamingSession, PSignalingMessage);
 STATUS handleOffer(PSampleConfiguration, PSampleStreamingSession, PSignalingMessage);
 STATUS handleRemoteCandidate(PSampleStreamingSession, PSignalingMessage);
@@ -152,13 +164,18 @@ STATUS respondWithAnswer(PSampleStreamingSession);
 STATUS resetSampleConfigurationState(PSampleConfiguration);
 VOID sampleFrameHandler(UINT64, PFrame);
 VOID sampleBandwidthEstimationHandler(UINT64, DOUBLE);
+VOID sampleSenderBandwidthEstimationHandler(UINT64, UINT32, UINT32, UINT32, UINT32, UINT64);
 VOID onDataChannel(UINT64, PRtcDataChannel);
 VOID onConnectionStateChange(UINT64, RTC_PEER_CONNECTION_STATE);
 STATUS sessionCleanupWait(PSampleConfiguration);
-STATUS awaitGetIceConfigInfoCount(SIGNALING_CLIENT_HANDLE, PUINT32);
 STATUS logSignalingClientStats(PSignalingClientMetrics);
 STATUS logSelectedIceCandidatesInformation(PSampleStreamingSession);
 STATUS logStartUpLatency(PSampleConfiguration);
+STATUS createMessageQueue(UINT64, PPendingMessageQueue*);
+STATUS freeMessageQueue(PPendingMessageQueue);
+STATUS submitPendingIceCandidate(PPendingMessageQueue, PSampleStreamingSession);
+STATUS removeExpiredMessageQueues(PStackQueue);
+STATUS getPendingMessageQueueForHash(PStackQueue, UINT64, BOOL, PPendingMessageQueue*);
 
 #ifdef __cplusplus
 }

@@ -45,6 +45,7 @@ ExternalProject_Add(project_libwebsockets
         # change to DEBUG for more logging
         -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
         -DOPENSSL_ROOT_DIR=${OPENSSL_DIR}
+        -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
         BUILD_ALWAYS      TRUE
     TEST_COMMAND      ""
 )
