@@ -338,6 +338,8 @@ INT32 main(INT32 argc, CHAR* argv[])
     STATUS retStatus = STATUS_SUCCESS;
     PSampleConfiguration pSampleConfiguration = NULL;
 
+    SET_INSTRUMENTED_ALLOCATORS();
+
     signal(SIGINT, sigintHandler);
 
     // do trickle-ice by default
@@ -454,9 +456,8 @@ CleanUp:
         // Kick of the termination sequence
         ATOMIC_STORE_BOOL(&pSampleConfiguration->appTerminateFlag, TRUE);
 
-        if (pSampleConfiguration->videoSenderTid != (UINT64) NULL) {
-            // Join the threads
-            THREAD_JOIN(pSampleConfiguration->videoSenderTid, NULL);
+        if (pSampleConfiguration->mediaSenderTid != INVALID_TID_VALUE) {
+            THREAD_JOIN(pSampleConfiguration->mediaSenderTid, NULL);
         }
 
         if (pSampleConfiguration->enableFileLogging) {
@@ -473,6 +474,8 @@ CleanUp:
         }
     }
     printf("[KVS Gstreamer Master] Cleanup done\n");
+
+    RESET_INSTRUMENTED_ALLOCATORS();
 
     // https://www.gnu.org/software/libc/manual/html_node/Exit-Status.html
     // We can only return with 0 - 127. Some platforms treat exit code >= 128

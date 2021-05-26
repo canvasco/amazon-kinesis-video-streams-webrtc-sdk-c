@@ -35,6 +35,7 @@ STATUS createSocketConnection(KVS_IP_FAMILY_TYPE familyType, KVS_SOCKET_PROTOCOL
     }
     ATOMIC_STORE_BOOL(&pSocketConnection->connectionClosed, FALSE);
     ATOMIC_STORE_BOOL(&pSocketConnection->receiveData, FALSE);
+    ATOMIC_STORE_BOOL(&pSocketConnection->inUse, FALSE);
     pSocketConnection->dataAvailableCallbackCustomData = customData;
     pSocketConnection->dataAvailableCallbackFn = dataAvailableFn;
 
@@ -60,11 +61,22 @@ STATUS freeSocketConnection(PSocketConnection* ppSocketConnection)
     ENTERS();
     STATUS retStatus = STATUS_SUCCESS;
     PSocketConnection pSocketConnection = NULL;
+    UINT64 shutdownTimeout;
 
     CHK(ppSocketConnection != NULL, STATUS_NULL_ARG);
     pSocketConnection = *ppSocketConnection;
     CHK(pSocketConnection != NULL, retStatus);
     ATOMIC_STORE_BOOL(&pSocketConnection->connectionClosed, TRUE);
+
+    // Await for the socket connection to be released
+    shutdownTimeout = GETTIME() + KVS_ICE_TURN_CONNECTION_SHUTDOWN_TIMEOUT;
+    while (ATOMIC_LOAD_BOOL(&pSocketConnection->inUse) && GETTIME() < shutdownTimeout) {
+        THREAD_SLEEP(KVS_ICE_SHORT_CHECK_DELAY);
+    }
+
+    if (ATOMIC_LOAD_BOOL(&pSocketConnection->inUse)) {
+        DLOGW("Shutting down socket connection timedout after %u seconds", KVS_ICE_TURN_CONNECTION_SHUTDOWN_TIMEOUT / HUNDREDS_OF_NANOS_IN_A_SECOND);
+    }
 
     if (IS_VALID_MUTEX_VALUE(pSocketConnection->lock)) {
         MUTEX_FREE(pSocketConnection->lock);
@@ -74,7 +86,9 @@ STATUS freeSocketConnection(PSocketConnection* ppSocketConnection)
         freeTlsSession(&pSocketConnection->pTlsSession);
     }
 
-    CHK_STATUS(closeSocket(pSocketConnection->localSocket));
+    if (STATUS_FAILED(retStatus = closeSocket(pSocketConnection->localSocket))) {
+        DLOGW("Failed to close the local socket with 0x%08x", retStatus);
+    }
 
     MEMFREE(pSocketConnection);
 
@@ -340,7 +354,7 @@ STATUS socketSendDataWithRetry(PSocketConnection pSocketConnection, PBYTE buf, U
     }
 
     while (socketWriteAttempt < MAX_SOCKET_WRITE_RETRY && bytesWritten < bufLen) {
-        result = sendto(pSocketConnection->localSocket, buf, bufLen, NO_SIGNAL, destAddr, addrLen);
+        result = sendto(pSocketConnection->localSocket, buf + bytesWritten, bufLen - bytesWritten, NO_SIGNAL, destAddr, addrLen);
         if (result < 0) {
             errorNum = getErrorCode();
             if (errorNum == EAGAIN || errorNum == EWOULDBLOCK) {
@@ -364,10 +378,12 @@ STATUS socketSendDataWithRetry(PSocketConnection pSocketConnection, PBYTE buf, U
                 DLOGD("sendto() failed with errno %s", getErrorString(errorNum));
                 break;
             }
+
+            // Indicate an attempt only on error
+            socketWriteAttempt++;
         } else {
             bytesWritten += result;
         }
-        socketWriteAttempt++;
     }
 
     if (pBytesWritten != NULL) {

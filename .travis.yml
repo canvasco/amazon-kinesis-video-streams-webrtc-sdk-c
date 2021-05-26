@@ -31,14 +31,15 @@ matrix:
   include:
     #clang check
     - name: "clang-format Check"
-      os: osx
+      os: linux
       compiler: clang
       before_script:
-        - brew install clang-format
+        - sudo apt-get -q update
+        - sudo apt-get -y install clang-format
         - mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_TEST=TRUE
       script:
         - cd ..
-        - bash check-clang.sh
+        - bash scripts/check-clang.sh
 
     # MacOS Builds
     - name: "OSX GCC"
@@ -157,7 +158,7 @@ matrix:
         - alpine cmake .. -DBUILD_STATIC_LIBS=TRUE -DBUILD_TEST=TRUE
         - alpine make
         # ldd will return non-zero when there's no dynamic link. So, the positive value for static builds is non-zero
-        - alpine ../check-static-build.sh || travis_terminate 1
+        - alpine ../scripts/check-static-build.sh || travis_terminate 1
         - alpine ./tst/webrtc_client_test
       after_failure: skip # no coredumps in container
 
@@ -207,7 +208,7 @@ matrix:
         - unset CC CC_FOR_BUILD CXX CXX_FOR_BUILD # We want to use MSVC
         - export "PATH=/c/Strawberry/perl/site/bin:/c/Strawberry/perl/bin:/c/Strawberry/c/bin:/c/Program Files/NASM:`pwd`/open-source/lib:`pwd`/open-source/bin:$PATH"
         - .github/build_windows.bat
-        - cd build/tst && ./webrtc_client_test.exe --gtest_filter="-DataChannelFunctionalityTest.*:IceApiTest.*:IceFunctionalityTest.*:PeerConnectionFunctionalityTest.*:SignalingApiFunctionalityTest.*:TurnConnectionFunctionalityTest.*:RtpFunctionalityTest.marshallUnmarshallH264Data:RtpFunctionalityTest.packingUnpackingVerifySameH264Frame"
+        - cd build/tst && ./webrtc_client_test.exe --gtest_filter="-DataChannelFunctionalityTest.*:IceApiTest.*:IceFunctionalityTest.*:PeerConnectionFunctionalityTest.*:SignalingApiFunctionalityTest.*:TurnConnectionFunctionalityTest.*:RtpFunctionalityTest.marshallUnmarshallH264Data:RtpFunctionalityTest.packingUnpackingVerifySameH264Frame:RtcpFunctionalityTest.onRtcpPacketCompound:RtcpFunctionalityTest.twcc3"
             
     - name: "Sample check"
       os: linux
@@ -222,7 +223,7 @@ matrix:
       script:
         - make
         - cd ..
-        - ./check-sample.sh
+        - ./scripts/check-sample.sh
 
     # Generate Doxygen
     - name: "Generate Doxygen"

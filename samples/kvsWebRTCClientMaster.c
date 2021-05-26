@@ -12,6 +12,8 @@ INT32 main(INT32 argc, CHAR* argv[])
     SignalingClientMetrics signalingClientMetrics;
     signalingClientMetrics.version = 0;
 
+    SET_INSTRUMENTED_ALLOCATORS();
+
 #ifndef _WIN32
     signal(SIGINT, sigintHandler);
 #endif
@@ -113,15 +115,8 @@ CleanUp:
         // Kick of the termination sequence
         ATOMIC_STORE_BOOL(&pSampleConfiguration->appTerminateFlag, TRUE);
 
-        // Join the threads
-        if (pSampleConfiguration->videoSenderTid != (UINT64) NULL) {
-            // Join the threads
-            THREAD_JOIN(pSampleConfiguration->videoSenderTid, NULL);
-        }
-
-        if (pSampleConfiguration->audioSenderTid != (UINT64) NULL) {
-            // Join the threads
-            THREAD_JOIN(pSampleConfiguration->audioSenderTid, NULL);
+        if (pSampleConfiguration->mediaSenderTid != INVALID_TID_VALUE) {
+            THREAD_JOIN(pSampleConfiguration->mediaSenderTid, NULL);
         }
 
         if (pSampleConfiguration->enableFileLogging) {
@@ -144,6 +139,8 @@ CleanUp:
         }
     }
     printf("[KVS Master] Cleanup done\n");
+
+    RESET_INSTRUMENTED_ALLOCATORS();
 
     // https://www.gnu.org/software/libc/manual/html_node/Exit-Status.html
     // We can only return with 0 - 127. Some platforms treat exit code >= 128
@@ -265,6 +262,8 @@ PVOID sendVideoPackets(PVOID args)
     }
 
 CleanUp:
+
+    CHK_LOG_ERR(retStatus);
 
     return (PVOID)(ULONG_PTR) retStatus;
 }
