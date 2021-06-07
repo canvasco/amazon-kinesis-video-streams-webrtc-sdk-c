@@ -51,7 +51,6 @@ auto lfToCRLF = [](PCHAR sdp, INT32 sdpLen) -> std::string {
     return newSDP;
 };
 
-
 template <typename Func> void assertLFAndCRLF(PCHAR sdp, INT32 sdpLen, Func&& assertFn)
 {
     assertFn(sdp);
@@ -540,7 +539,7 @@ a=rtpmap:111 opus/48000/2
 a=fmtp:111 minptime=10;useinbandfec=1
 a=rtcp-fb:111 nack)";
 
-TEST_F(SdpApiTest, threeVideoTracksWithSameCodec)
+TEST_F(SdpApiTest, exceedMaxMediaCount)
 {
     auto offer3 = std::string(R"(v=0
 o=- 481034601 1588366671 IN IP4 0.0.0.0
@@ -551,21 +550,15 @@ a=group:BUNDLE 0 1 2 3
 )");
     offer3 += sdpdata;
     offer3 += "\n";
-    offer3 += sdpvideo;
-    offer3 += "\n";
-    offer3 += sdpvideo;
-    offer3 += "\n";
-    offer3 += sdpvideo;
-    offer3 += "\n";
-    offer3 += sdpvideo;
-    offer3 += "\n";
-    offer3 += sdpvideo;
-    offer3 += "\n";
+    for (int i = 0; i < MAX_SDP_SESSION_MEDIA_COUNT; i++) {
+        offer3 += sdpvideo;
+        offer3 += "\n";
+    }
 
     assertLFAndCRLF((PCHAR) offer3.c_str(), offer3.size(), [](PCHAR sdp) {
         SessionDescription sessionDescription;
         MEMSET(&sessionDescription, 0x00, SIZEOF(SessionDescription));
-        // as log as Sdp.h  MAX_SDP_SESSION_MEDIA_COUNT 5 this should fail instead of overwriting memory
+        // since the offer exceeds MAX_SDP_SESSION_MEDIA_COUNT this should fail instead of overwriting memory
         EXPECT_EQ(STATUS_BUFFER_TOO_SMALL, deserializeSessionDescription(&sessionDescription, (PCHAR) sdp));
     });
 }
